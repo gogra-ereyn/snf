@@ -1,12 +1,10 @@
 #ifndef LOOKUP_H
 #define LOOKUP_H
 
+#include <string.h>
 #include <stdint.h>
 #include <sys/mman.h>
 
-//
-#define GR 0x9e3779b97f4a7c15ULL
-// as papa knuth commands
 #define FB 11400714819323198485ULL
 
 #ifndef MAP_BITS
@@ -30,6 +28,11 @@ static inline uint64_t sf_hash(uint64_t k)
 {
 	return (k * FB) & MMASK;
 }
+
+
+
+static inline void sf_map_init(sf_map_t *m) { memset(m, 0, sizeof *m); }
+
 
 static inline uint32_t sf_map_get(const sf_map_t *m, uint64_t key)
 {
@@ -68,65 +71,13 @@ static inline int sf_map_put(sf_map_t *m, uint64_t key, uint32_t value)
 		uint64_t kk = m->slot[i].k;
 		if (kk == key || kk == 0) {
 			m->slot[i].v = value;
-			if (kk == 0 && value >= m->next_id) m->next_id = value + 1;
+			if (kk == 0 && value >= m->next_id)
+				m->next_id = value + 1;
 			m->slot[i].k = key;
 			return 1;
 		}
 		i = (i + 1) & MMASK;
 	}
-}
-
-typedef struct {
-	uint64_t id;
-	uint32_t idx; // probably jsut 64 it ?
-} lookup_entry_t;
-
-typedef struct {
-	lookup_entry_t *entries;
-	uint32_t capacity;
-	uint32_t count;
-} lookup_t;
-
-void lookup_init(lookup_t *map, uint32_t cap)
-{
-	map->capacity = cap;
-	map->count = 0;
-	map->entries = (lookup_entry_t *)mmap(0, cap * sizeof(*map->entries),
-					      PROT_READ | PROT_WRITE,
-					      MAP_PRIVATE | MAP_ANONYMOUS, -1,
-					      0);
-
-	for (uint32_t i = 0; i < cap; ++i)
-		map->entries[i].id = 0;
-}
-
-void lookup_put(lookup_t *map, uint64_t snf, uint32_t st_idx)
-{
-	uint32_t hash = (uint32_t)(snf * GR);
-	uint32_t idx = hash & (map->capacity - 1);
-
-	while (map->entries[idx].id != 0 && map->entries[idx].id != snf) {
-		idx = (idx + 1) & (map->capacity - 1);
-	}
-
-	if (map->entries[idx].id == 0)
-		map->count++;
-
-	map->entries[idx].id = snf;
-	map->entries[idx].idx = st_idx;
-}
-
-uint32_t id_map_get(const lookup_t *map, uint64_t snf)
-{
-	uint32_t hash = (uint32_t)(snf * GR);
-	uint32_t idx = hash & (map->capacity - 1);
-	while (map->entries[idx].id != 0) {
-		if (map->entries[idx].id == snf) {
-			return map->entries[idx].idx;
-		}
-		idx = (idx + 1) & (map->capacity - 1);
-	}
-	return 0;
 }
 
 #endif
