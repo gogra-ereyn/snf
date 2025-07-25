@@ -64,6 +64,14 @@ void sf_extract_parts(uint64_t id, sf_parts_t *parts)
 	parts->seq = id & SF_SEQ_MAX;
 }
 
+void sf_extract_raw_parts(uint64_t id, uint64_t *ts, uint16_t *node_id,
+			  uint16_t *seq)
+{
+	*ts = (id >> (SF_NODE_BITS + SF_SEQ_BITS)) + SF_EPOCH_MILLIS;
+	*node_id = (id >> SF_SEQ_BITS) & SF_NODE_MAX;
+	*seq = id & SF_SEQ_MAX;
+}
+
 // TODO , TMP. we ofc do not want IO anywhere near this file.
 #include <stdio.h>
 static inline void sf_print_snf_parts(uint64_t id)
