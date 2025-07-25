@@ -29,10 +29,15 @@ static inline uint64_t sf_hash(uint64_t k)
 	return (k * FB) & MMASK;
 }
 
+static inline void sf_map_init(sf_map_t *m)
+{
+	memset(m, 0, sizeof *m);
+}
 
-
-static inline void sf_map_init(sf_map_t *m) { memset(m, 0, sizeof *m); }
-
+static inline int sf_map_full(sf_map_t *m)
+{
+	return m->next_id >= MCAP;
+}
 
 static inline uint32_t sf_map_get(const sf_map_t *m, uint64_t key)
 {
@@ -55,6 +60,8 @@ static inline uint32_t sf_map_get_or_create(sf_map_t *m, uint64_t key)
 		if (kk == key)
 			return m->slot[i].v;
 		if (kk == 0) {
+			if (sf_map_full(m))
+				return UINT32_MAX;
 			uint32_t id = m->next_id++;
 			m->slot[i].v = id;
 			m->slot[i].k = key;
