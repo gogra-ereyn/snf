@@ -26,11 +26,55 @@ typedef struct {
 	uint32_t next_id;
 } sf_map_t;
 
+static inline uint64_t sf_hash(uint64_t k)
+{
+	return (k * FB) & MMASK;
+}
 
+static inline uint32_t sf_map_get(const sf_map_t *m, uint64_t key)
+{
+	size_t i = sf_hash(key);
+	for (;;) {
+		uint64_t kk = m->slot[i].k;
+		if (kk == key)
+			return m->slot[i].v;
+		if (kk == 0)
+			return UINT32_MAX;
+		i = (i + 1) & MMASK;
+	}
+}
 
+static inline uint32_t sf_map_get_or_create(sf_map_t *m, uint64_t key)
+{
+	size_t i = sf_hash(key);
+	for (;;) {
+		uint64_t kk = m->slot[i].k;
+		if (kk == key)
+			return m->slot[i].v;
+		if (kk == 0) {
+			uint32_t id = m->next_id++;
+			m->slot[i].v = id;
+			m->slot[i].k = key;
+			return id;
+		}
+		i = (i + 1) & MMASK;
+	}
+}
 
-
-
+static inline int sf_map_put(sf_map_t *m, uint64_t key, uint32_t value)
+{
+	size_t i = sf_hash(key);
+	for (;;) {
+		uint64_t kk = m->slot[i].k;
+		if (kk == key || kk == 0) {
+			m->slot[i].v = value;
+			if (kk == 0 && value >= m->next_id) m->next_id = value + 1;
+			m->slot[i].k = key;
+			return 1;
+		}
+		i = (i + 1) & MMASK;
+	}
+}
 
 typedef struct {
 	uint64_t id;
