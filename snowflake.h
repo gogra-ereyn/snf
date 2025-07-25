@@ -12,6 +12,12 @@ enum {
 };
 
 typedef struct {
+	uint64_t ts;
+	uint16_t node_id;
+	uint16_t seq;
+} sf_parts_t;
+
+typedef struct {
 	uint16_t node_id;
 	uint16_t seq;
 	uint64_t last_ms;
@@ -49,6 +55,23 @@ void sf_gen_init(sf_gen_t *c, uint16_t node_id)
 uint64_t sf_gen_next(sf_gen_t *c, uint64_t now_ms)
 {
 	return snowflake_gen_next(&c->last_ms, c->node_id, &c->seq, now_ms);
+}
+
+void sf_extract_parts(uint64_t id, sf_parts_t *parts)
+{
+	parts->ts = (id >> (SF_NODE_BITS + SF_SEQ_BITS)) + SF_EPOCH_MILLIS;
+	parts->node_id = (id >> SF_SEQ_BITS) & SF_NODE_MAX;
+	parts->seq = id & SF_SEQ_MAX;
+}
+
+// TODO , TMP. we ofc do not want IO anywhere near this file.
+#include <stdio.h>
+static inline void sf_print_snf_parts(uint64_t id)
+{
+	sf_parts_t parts;
+	sf_extract_parts(id, &parts);
+	dprintf(2, "timestamp=%zu, node_id=%u, seq=%u\n", parts.ts,
+		parts.node_id, parts.seq);
 }
 
 #endif
