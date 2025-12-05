@@ -23,8 +23,16 @@ typedef struct {
 	uint64_t last_ms;
 } sf_gen_t;
 
-uint64_t snowflake_gen_next(uint64_t *last_ms, uint16_t node_id, uint16_t *seq,
-			    uint64_t now_ms)
+static inline uint64_t snowflake_compose(uint64_t ts, uint16_t node_id,
+					 uint16_t seq)
+{
+	return ((ts - SF_EPOCH_MILLIS) << (SF_NODE_BITS + SF_SEQ_BITS)) |
+	       ((uint64_t)(node_id & SF_NODE_MAX) << SF_SEQ_BITS) |
+	       (uint64_t)(seq & SF_SEQ_MAX);
+}
+
+static inline uint64_t snowflake_gen_next(uint64_t *last_ms, uint16_t node_id,
+					  uint16_t *seq, uint64_t now_ms)
 {
 	if (now_ms < *last_ms)
 		now_ms = *last_ms;
@@ -40,9 +48,7 @@ uint64_t snowflake_gen_next(uint64_t *last_ms, uint16_t node_id, uint16_t *seq,
 
 	*last_ms = now_ms;
 
-	return ((now_ms - SF_EPOCH_MILLIS) << (SF_NODE_BITS + SF_SEQ_BITS)) |
-	       ((uint64_t)(node_id & SF_NODE_MAX) << SF_SEQ_BITS) |
-	       (uint64_t)(*seq);
+	return snowflake_compose(now_ms, node_id, *seq);
 }
 
 void sf_gen_init(sf_gen_t *c, uint16_t node_id)
@@ -70,16 +76,6 @@ void sf_extract_raw_parts(uint64_t id, uint64_t *ts, uint16_t *node_id,
 	*ts = (id >> (SF_NODE_BITS + SF_SEQ_BITS)) + SF_EPOCH_MILLIS;
 	*node_id = (id >> SF_SEQ_BITS) & SF_NODE_MAX;
 	*seq = id & SF_SEQ_MAX;
-}
-
-// TODO , TMP. we ofc do not want IO anywhere near this file.
-#include <stdio.h>
-static inline void sf_print_snf_parts(uint64_t id)
-{
-	sf_parts_t parts;
-	sf_extract_parts(id, &parts);
-	dprintf(2, "timestamp=%zu, node_id=%u, seq=%u\n", parts.ts,
-		parts.node_id, parts.seq);
 }
 
 #endif

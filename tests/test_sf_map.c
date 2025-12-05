@@ -15,6 +15,16 @@ static void make_keys(void)
 		keys[i] = sf_gen_next(&g, SF_EPOCH_MILLIS + i);
 }
 
+static void print_id(uint64_t id)
+{
+	sf_parts_t parts;
+	sf_extract_parts(id, &parts);
+	printf("id: %lu (0x%016lx)\n\n", id, id);
+	printf("timestamp (ms): %lu\n", parts.ts);
+	printf("node_id:        %u\n", parts.node_id);
+	printf("seq:            %u\n", parts.seq);
+}
+
 int main(void)
 {
 	static sf_map_t map;
@@ -23,7 +33,7 @@ int main(void)
 
 	for (int i = 0; i < KEYS; ++i) {
 		dprintf(2, "[key #%u]: ", i);
-		sf_print_snf_parts(keys[i]);
+		print_id(keys[i]);
 	}
 
 	info("### populate");

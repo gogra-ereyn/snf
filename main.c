@@ -22,13 +22,6 @@ static void print_id(uint64_t id)
 	printf("seq:            %u\n", parts.seq);
 }
 
-// just for rushin' innit
-static uint64_t build_id(uint64_t ts, uint16_t node_id, uint16_t seq)
-{
-	return ((ts - SF_EPOCH_MILLIS) << (SF_NODE_BITS + SF_SEQ_BITS)) |
-	       ((uint64_t)(node_id & SF_NODE_MAX) << SF_SEQ_BITS) |
-	       (uint64_t)(seq & SF_SEQ_MAX);
-}
 static void usage(const char *prog, int rc)
 {
 	fprintf(stderr, "usage: %s [-t timestamp_ms] [-n node_id] [-s seq]\n",
@@ -115,7 +108,7 @@ int main(int argc, char **argv)
 			parts.node_id = node_id;
 		if (seq_set)
 			parts.seq = seq;
-		id = build_id(parts.ts, parts.node_id, parts.seq);
+		id = snowflake_compose(parts.ts, parts.node_id, parts.seq);
 		print_id(id);
 		return 0;
 	}
@@ -123,7 +116,7 @@ int main(int argc, char **argv)
 	if (!ts_set)
 		ts = now_ms();
 
-	id = build_id(ts, node_id, seq);
+	id = snowflake_compose(ts, node_id, seq);
 	print_id(id);
 
 	return 0;
