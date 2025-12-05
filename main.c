@@ -1,81 +1,34 @@
-#include <getopt.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <fcntl.h>
+#include <time.h>
+#include "snowflake.h"
 
-#define DEBUG
-#ifdef DEBUG
-#define log(fmt, ...) fprintf(stderr, fmt "\n", ##__VA_ARGS__)
-#else
-#define log(fmt, ...) ((void)0)
-#endif
-
-
-char *envstr(char *name)
+static uint64_t now_ms(void)
 {
-	char *value;
-	value = getenv(name);
-	return value ? value : "";
+	struct timespec ts;
+	clock_gettime(CLOCK_REALTIME, &ts);
+	return (uint64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
-int usage(char *name, int rc)
+int main(void)
 {
-	fprintf(stderr, "Usage: %s [options]\n", name);
-	fprintf(stderr, "Options:\n");
+	sf_gen_t gen;
+	sf_parts_t parts;
+	uint64_t id;
 
-	fprintf(stderr, "\t-h, --help\n");
-	fprintf(stderr, "\t\tShow this help message\n");
-	fprintf(stderr, "\n");
+	sf_gen_init(&gen, 42);
+	id = sf_gen_next(&gen, now_ms());
 
-	fprintf(stderr, "\t-i, --input FILE\n");
-	fprintf(stderr, "\t\tSpecify input file\n");
-	fprintf(stderr, "\t\t[default: stdin]\n");
-	fprintf(stderr, "\t\t[env: INPUT_FILE=%s]\n", envstr("INPUT_FILE"));
-	fprintf(stderr, "\n");
-	return rc;
-}
+	printf("id: %lu (0x%016lx)\n\n", id, id);
 
-void invalid_input(const char *format, ...)
-{
-	va_list args;
-	va_start(args, format);
-	vfprintf(stderr, format, args);
-	fprintf(stderr, "\n");
-	va_end(args);
-	usage("main", 1);
-}
+	sf_extract_parts(id, &parts);
+	printf("timestamp (ms): %lu\n", parts.ts);
+	printf("node_id:        %u\n", parts.node_id);
+	printf("seq:            %u\n", parts.seq);
 
-
-int main(int argc, char **argv)
-{
-	static struct option long_options[] = {
-		{ "help", no_argument, 0, 'h' },
-		{ "input", optional_argument, 0, 'i' },
-		{ 0, 0, 0, 0 }
-	};
-
-	int option_index = 0;
-	int c;
-	int fd=0;
-	while ((c = getopt_long(argc, argv, "hai:", long_options,
-				&option_index)) != -1) {
-		switch (c) {
-		case 'h':
-			usage(*argv, 0);
-			return 0;
-		case 'i':
-			{
-				if ((fd = open(optarg, O_RDONLY | O_CLOEXEC)) < 0)
-					invalid_input("Failed to open input file: %s", optarg);
-			}
-			break;
-		case '?':
-			return 1;
-		default:
-			break;
-		}
-	}
+	printf("\nbit layout (64 bits total):\n");
+	printf("  [63:22] timestamp offset (42 bits)\n");
+	printf("  [21:12] node_id          (10 bits)\n");
+	printf("  [11:0]  sequence         (12 bits)\n");
 
 	return 0;
 }

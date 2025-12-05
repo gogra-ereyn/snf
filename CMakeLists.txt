@@ -27,6 +27,8 @@ target_include_directories(sf_map INTERFACE
 
 )
 
+add_executable(main main.c snowflake.h)
+
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
